@@ -67,7 +67,8 @@
       PIP_NO_CACHE_DIR=1 \
       APP_UID \
       APP_GID \
-      APP_ROOT  
+      APP_ROOT \
+      TARGETARCH 
 
   # environment
   ENV APP_ROOT=${APP_ROOT} \
@@ -89,13 +90,20 @@
 
   # multi-stage
   COPY --from=requirement-builder /requirements.txt ${APP_ROOT}
-  COPY --from=bitwarden-sdk /bitwarden_sdk-1.0.0/target/wheels/bitwarden_sdk-1.0.0-cp312-cp312-linux_x86_64.whl /tmp
+  COPY --from=bitwarden-sdk /bitwarden_sdk-1.0.0/target/wheels/ /tmp
   COPY ./server/ ${APP_ROOT}
   COPY ./entrypoint.sh /usr/local/bin
 
   # install application
   RUN set -ex; \
-    pip3 install /tmp/bitwarden_sdk-1.0.0-cp312-cp312-linux_x86_64.whl; \
+    case "${TARGETARCH}" in \
+      "amd64") \
+        pip3 install /tmp/bitwarden_sdk-1.0.0-cp312-cp312-linux_x86_64.whl; \
+      ;; \
+      "arm64") \
+        pip3 install /tmp/bitwarden_sdk-1.0.0-cp312-cp312-linux_aarch64.whl; \
+      ;; \
+    esac; \
     pip3 install -r ${APP_ROOT}/requirements.txt; \
     apk del --no-network .setup; \
     rm -rf /tmp/*;
